@@ -30,10 +30,22 @@ La persona usa ese código en la pestaña **Crear cuenta**.
 - `docker compose exec auth-service python -m app.prueba` → 9/9
 - `docker compose exec api python -m app.prueba` → 11/11
 
+## Despliegue público (Oracle Cloud Always Free)
+El servidor usa los mismos contenedores más **Caddy**, que da HTTPS gratis y automático.
+1. En el servidor (Ubuntu): `git clone https://github.com/EduCortes-ing/aware-search.git && cd aware-search`
+2. `bash deploy/instalar.sh` (Docker, firewall, swap y `.env` con secretos aleatorios). Luego sal y vuelve a entrar por SSH.
+3. `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`
+4. `docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm etl`
+5. `docker compose exec auth-service python -m app.cli crear-admin --usuario angel`
+6. Abre `https://<DOMAIN>` (el dominio está en el `.env` del servidor).
+
+Actualizar después de un `git push`: `git pull` y repetir el paso 3.
+
 ## Estructura
 - `frontend/`       Nginx + `login.html`, `index.html`, `app.js`, `styles.css`
 - `api/`            API REST en Python (FastAPI)
 - `auth-service/`   Microservicio de autenticación (JWT + bcrypt)
 - `search-service/` Microservicio de búsqueda
 - `etl/`            Carga del Excel de la OMS a la BD
+- `deploy/`         Caddyfile e instalador del servidor
 - `data/`           Excel original de la OMS y nombres en español (`aliases_es.csv`)

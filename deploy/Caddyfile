@@ -1,0 +1,14 @@
+# =====================================================================
+# deploy/Caddyfile - Configuracion de Caddy en el servidor publico
+# Caddy pide a Let's Encrypt un certificado HTTPS gratuito para DOMAIN,
+# lo renueva solo y redirige automaticamente http:// -> https://
+# =====================================================================
+
+{$DOMAIN} {                                          # dominio publico (viene del .env)
+	encode zstd gzip                                 # comprime las respuestas: carga mas rapido
+	header {
+		Strict-Transport-Security "max-age=31536000" # HSTS: el navegador solo usara HTTPS por 1 año
+		-Server                                      # oculta que el servidor es Caddy
+	}
+	reverse_proxy frontend:80                        # todo se reenvia al contenedor de Nginx (frontend)
+}

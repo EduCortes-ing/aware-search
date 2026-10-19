@@ -1,0 +1,5 @@
+# Los scripts y configs del servidor Linux siempre con saltos de linea LF (si no, bash falla)
+*.sh text eol=lf
+Caddyfile text eol=lf
+*.conf text eol=lf
+*.yml text eol=lf

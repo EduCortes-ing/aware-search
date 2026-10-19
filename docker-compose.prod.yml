@@ -1,0 +1,48 @@
+# =====================================================================
+# docker-compose.prod.yml - Ajustes SOLO para el servidor publico (Oracle)
+# Se combina con el docker-compose.yml normal:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# En tu laptop NO se usa: ahi sigues con "docker compose up" y localhost:8080.
+# =====================================================================
+
+services:
+
+  # ---------- CADDY: puerta HTTPS publica (certificado gratis y automatico) ----------
+  caddy:
+    image: caddy:2-alpine                    # servidor web que obtiene el certificado HTTPS solo
+    restart: unless-stopped                  # se levanta solo si el servidor se reinicia
+    ports:
+      - "80:80"                              # HTTP: solo para redirigir a HTTPS y validar el certificado
+      - "443:443"                            # HTTPS: la unica entrada real de usuarios
+    environment:
+      DOMAIN: ${DOMAIN}                      # dominio publico, se lee del .env del servidor
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro   # configuracion de Caddy (solo lectura)
+      - caddy_data:/data                     # guarda el certificado para no pedirlo en cada reinicio
+      - caddy_config:/config                 # configuracion interna de Caddy
+    depends_on:
+      - frontend                             # arranca despues del frontend
+    networks:
+      - frontend_net                         # solo ve al frontend; nunca a las bases de datos
+
+  # ---------- El frontend deja de publicarse en el puerto 8080 ----------
+  frontend:
+    ports: !reset []                         # quita "8080:80": ahora solo Caddy le habla (por dentro)
+    restart: unless-stopped                  # reinicio automatico
+
+  # ---------- Reinicio automatico para el resto de contenedores ----------
+  api:
+    restart: unless-stopped
+  auth-service:
+    restart: unless-stopped
+  search-service:
+    restart: unless-stopped
+  db-users:
+    restart: unless-stopped
+  db-aware:
+    restart: unless-stopped
+
+# Volumenes nuevos para Caddy (el certificado sobrevive a reinicios)
+volumes:
+  caddy_data:
+  caddy_config:
