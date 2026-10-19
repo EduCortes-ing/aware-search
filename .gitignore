@@ -1,0 +1,11 @@
+# Secretos: jamas subir a GitHub
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Sistema y editor
+.DS_Store
+.vscode/

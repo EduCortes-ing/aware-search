@@ -1,0 +1,185 @@
+/* =====================================================================
+   styles.css - Estilos del login y del buscador
+   Colores definidos una sola vez como variables; el modo oscuro solo
+   cambia esas variables. Colores AWaRe: verde, ambar, rojo y gris.
+   ===================================================================== */
+
+:root {                                               /* variables de color del modo claro */
+  --fondo: #f4f6f5;                                   /* fondo de la pagina */
+  --superficie: #ffffff;                              /* fondo de tarjetas y formularios */
+  --texto: #18211d;                                   /* texto principal */
+  --texto-suave: #5b6862;                             /* texto secundario */
+  --borde: #dbe2de;                                   /* lineas y bordes */
+  --marca: #0f6b5c;                                   /* color de la aplicacion (verde farmacia) */
+  --marca-texto: #ffffff;                             /* texto sobre el color de marca */
+  --foco: #2f8f7f;                                    /* contorno al seleccionar un campo */
+  --access: #1e7d3a;      --access-fondo: #e3f3e7;    /* Access: verde */
+  --watch: #94560a;       --watch-fondo: #fdf0d9;     /* Watch: ambar */
+  --reserve: #b3261e;     --reserve-fondo: #fbe4e2;   /* Reserve: rojo */
+  --norec: #4d5652;       --norec-fondo: #e8ebe9;     /* No recomendado: gris */
+  --error: #b3261e;                                   /* mensajes de error */
+  --ok: #1e7d3a;                                      /* mensajes de exito */
+  --sombra: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05);  /* sombra suave */
+  color-scheme: light dark;                           /* controles nativos en claro u oscuro */
+}
+
+@media (prefers-color-scheme: dark) {                 /* si el sistema esta en modo oscuro */
+  :root {
+    --fondo: #101614;  --superficie: #18201d;  --texto: #e6ece9;  --texto-suave: #9aa8a1;
+    --borde: #2b3631;  --marca: #3fb59e;  --marca-texto: #08201b;  --foco: #5fd0b9;
+    --access: #6fd08a;   --access-fondo: #173322;     /* tonos claros sobre fondo oscuro */
+    --watch: #f0b860;    --watch-fondo: #3a2a10;
+    --reserve: #ff8a80;  --reserve-fondo: #3d1714;
+    --norec: #b9c3be;    --norec-fondo: #2a3330;
+    --error: #ff8a80;  --ok: #6fd08a;
+    --sombra: 0 1px 2px rgba(0,0,0,.4);
+  }
+}
+
+* { box-sizing: border-box; }                         /* el ancho incluye borde y relleno */
+
+body {                                                /* estilo base de todas las paginas */
+  margin: 0;                                          /* sin margen del navegador */
+  min-height: 100vh;                                  /* ocupa toda la pantalla */
+  background: var(--fondo);                           /* color de fondo */
+  color: var(--texto);                                /* color de texto */
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;  /* letra del sistema */
+  display: flex;                                      /* acomoda encabezado, contenido y pie */
+  flex-direction: column;                             /* uno debajo de otro */
+}
+
+.oculto-sin-sesion > * { visibility: hidden; }        /* el buscador no se ve hasta validar el token */
+
+h1, h2 { margin: 0; line-height: 1.2; }               /* titulos sin margenes extra */
+
+.solo-lectores {                                      /* texto solo para lectores de pantalla */
+  position: absolute; width: 1px; height: 1px;        /* invisible pero accesible */
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* ---------- Marca (icono + nombre) ---------- */
+.marca { display: flex; align-items: center; gap: 12px; }  /* icono al lado del nombre */
+.marca h1 { font-size: 1.35rem; }                     /* tamaño del nombre en el login */
+.marca .sub { margin: 2px 0 0; color: var(--texto-suave); font-size: .9rem; }  /* subtitulo */
+.marca-icono {                                        /* cuadro con una cruz de farmacia hecha con CSS */
+  width: 40px; height: 40px; border-radius: 10px;     /* cuadro redondeado */
+  background: var(--marca);                           /* color de marca */
+  position: relative; flex: none;                     /* referencia para la cruz; no se encoge */
+}
+.marca-icono::before, .marca-icono::after {           /* las dos barras de la cruz */
+  content: ""; position: absolute; background: var(--marca-texto); border-radius: 2px;
+}
+.marca-icono::before { width: 18px; height: 6px; left: 11px; top: 17px; }  /* barra horizontal */
+.marca-icono::after  { width: 6px; height: 18px; left: 17px; top: 11px; }  /* barra vertical */
+.marca-chica .marca-icono { width: 30px; height: 30px; border-radius: 8px; }  /* version pequeña */
+.marca-chica .marca-icono::before { width: 14px; height: 4px; left: 8px; top: 13px; }
+.marca-chica .marca-icono::after  { width: 4px; height: 14px; left: 13px; top: 8px; }
+
+/* ---------- Login ---------- */
+.pagina-login { justify-content: center; align-items: center; padding: 16px; }  /* tarjeta centrada */
+.tarjeta-login {                                      /* recuadro del login */
+  width: 100%; max-width: 400px;                      /* angosto y adaptable */
+  background: var(--superficie); border: 1px solid var(--borde);
+  border-radius: 16px; padding: 28px; box-shadow: var(--sombra);
+}
+.pestanas {                                           /* contenedor de las pestañas */
+  display: grid; grid-template-columns: 1fr 1fr;      /* dos pestañas del mismo ancho */
+  margin: 24px 0 8px; padding: 4px; gap: 4px;
+  background: var(--fondo); border-radius: 10px;
+}
+.pestana {                                            /* cada pestaña */
+  border: 0; background: transparent; color: var(--texto-suave);
+  padding: 8px; border-radius: 7px; font: inherit; font-weight: 600; cursor: pointer;
+}
+.pestana.activa { background: var(--superficie); color: var(--texto); box-shadow: var(--sombra); }  /* la elegida */
+
+form label { display: block; font-weight: 600; font-size: .9rem; margin: 14px 0 6px; }  /* etiquetas */
+input {                                               /* campos de texto */
+  width: 100%; font: inherit; color: var(--texto);
+  background: var(--superficie); border: 1px solid var(--borde);
+  border-radius: 10px; padding: 11px 12px;
+}
+input:focus { outline: 2px solid var(--foco); outline-offset: 1px; border-color: transparent; }  /* campo activo */
+.ayuda { margin: 6px 0 0; color: var(--texto-suave); font-size: .85rem; }  /* textos de ayuda */
+
+.boton-principal {                                    /* boton grande de enviar */
+  width: 100%; margin-top: 20px; padding: 12px;
+  border: 0; border-radius: 10px; cursor: pointer;
+  background: var(--marca); color: var(--marca-texto);
+  font: inherit; font-weight: 700;
+}
+.boton-principal:hover { filter: brightness(1.08); }  /* se aclara al pasar el mouse */
+.boton-principal:disabled { opacity: .6; cursor: progress; }  /* mientras espera respuesta */
+.boton-principal.cargando::after { content: " …"; }   /* indica que esta trabajando */
+
+.mensaje { min-height: 1.5em; margin: 14px 0 0; font-size: .92rem; }  /* zona de avisos */
+.mensaje[data-tipo="error"] { color: var(--error); }  /* aviso de error en rojo */
+.mensaje[data-tipo="ok"] { color: var(--ok); }        /* aviso de exito en verde */
+.mensaje[data-tipo="info"] { color: var(--texto-suave); }  /* aviso informativo */
+.pie { margin: 18px 0 0; color: var(--texto-suave); font-size: .8rem; text-align: center; }  /* nota final */
+
+/* ---------- Barra superior del buscador ---------- */
+.barra {                                              /* franja superior */
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 12px 16px; background: var(--superficie); border-bottom: 1px solid var(--borde);
+}
+.sesion { display: flex; align-items: center; gap: 12px; color: var(--texto-suave); font-size: .9rem; }
+.boton-texto {                                        /* boton con aspecto de enlace */
+  border: 1px solid var(--borde); background: transparent; color: var(--texto);
+  border-radius: 8px; padding: 6px 10px; font: inherit; cursor: pointer;
+}
+.boton-texto:hover { background: var(--fondo); }      /* resalta al pasar el mouse */
+
+/* ---------- Contenido del buscador ---------- */
+.contenido { width: 100%; max-width: 760px; margin: 0 auto; padding: 40px 16px 24px; flex: 1; }  /* columna central */
+.buscador h1 { font-size: clamp(1.5rem, 4vw, 2rem); margin-bottom: 16px; }  /* titulo adaptable */
+.buscador input {                                     /* caja de busqueda grande */
+  font-size: 1.15rem; padding: 14px 16px; border-radius: 14px; box-shadow: var(--sombra);
+}
+
+.leyenda {                                            /* leyenda de colores */
+  list-style: none; padding: 0; margin: 20px 0 0;
+  display: flex; flex-wrap: wrap; gap: 8px 18px;      /* se acomoda en varias lineas en celular */
+  color: var(--texto-suave); font-size: .85rem;
+}
+.leyenda li { display: flex; align-items: center; gap: 6px; }
+
+.chip {                                               /* etiqueta de categoria */
+  display: inline-block; padding: 2px 10px; border-radius: 999px;
+  font-size: .8rem; font-weight: 700; white-space: nowrap;
+}
+.chip.access { color: var(--access); background: var(--access-fondo); }        /* verde */
+.chip.watch { color: var(--watch); background: var(--watch-fondo); }           /* ambar */
+.chip.reserve { color: var(--reserve); background: var(--reserve-fondo); }     /* rojo */
+.chip.not-recommended { color: var(--norec); background: var(--norec-fondo); } /* gris */
+
+.estado { min-height: 1.5em; margin: 24px 0 8px; color: var(--texto-suave); font-size: .92rem; }  /* "3 resultados" */
+
+.resultados { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }  /* lista de tarjetas */
+.tarjeta {                                            /* una tarjeta por antibiotico */
+  background: var(--superficie); border: 1px solid var(--borde);
+  border-left: 6px solid var(--norec);                /* franja de color a la izquierda */
+  border-radius: 12px; padding: 16px 18px; box-shadow: var(--sombra);
+}
+.tarjeta.access { border-left-color: var(--access); }      /* franja verde */
+.tarjeta.watch { border-left-color: var(--watch); }        /* franja ambar */
+.tarjeta.reserve { border-left-color: var(--reserve); }    /* franja roja */
+.tarjeta-cabeza { display: flex; justify-content: space-between; align-items: center; gap: 12px; }  /* nombre y chip */
+.tarjeta .nombre { font-size: 1.15rem; overflow-wrap: anywhere; }  /* nombres largos no se salen */
+.tarjeta .chip { font-size: .9rem; padding: 4px 12px; }   /* chip mas grande en la tarjeta */
+
+.datos {                                              /* datos de la tarjeta */
+  margin: 12px 0 0; display: grid; gap: 4px 20px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));  /* columnas que se acomodan */
+}
+.datos dt { color: var(--texto-suave); font-size: .78rem; }   /* nombre del dato */
+.datos dd { margin: 0; font-weight: 600; }                    /* valor del dato */
+.nota { margin: 12px 0 0; padding-top: 10px; border-top: 1px dashed var(--borde); color: var(--texto-suave); font-size: .88rem; }
+
+.pie-pagina { padding: 16px; text-align: center; color: var(--texto-suave); font-size: .8rem; }  /* pie del buscador */
+
+@media (max-width: 480px) {                           /* celulares */
+  .tarjeta-cabeza { flex-direction: column; align-items: flex-start; }  /* chip debajo del nombre */
+  #saludo { display: none; }                          /* ahorra espacio en la barra */
+  .contenido { padding-top: 24px; }
+}

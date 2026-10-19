@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<!-- login.html: pantalla de inicio de sesion y de registro con codigo de invitacion -->
+<html lang="es">
+<head>
+  <meta charset="utf-8">                                              <!-- acentos y ñ correctos -->
+  <meta name="viewport" content="width=device-width, initial-scale=1"> <!-- se adapta a celulares -->
+  <title>Iniciar sesión · Buscador AWaRe</title>                      <!-- titulo de la pestaña -->
+  <link rel="stylesheet" href="styles.css">                           <!-- estilos compartidos -->
+  <script src="app.js" defer></script>                                <!-- logica; defer = corre al terminar de cargar el HTML -->
+</head>
+<body class="pagina-login" data-pagina="login">                      <!-- data-pagina le dice a app.js que pantalla es -->
+
+  <main class="tarjeta-login">                                        <!-- recuadro central -->
+    <header class="marca">                                            <!-- encabezado con el nombre de la app -->
+      <span class="marca-icono" aria-hidden="true"></span>            <!-- icono decorativo (solo CSS) -->
+      <div>
+        <h1>Buscador AWaRe</h1>                                       <!-- nombre de la aplicacion -->
+        <p class="sub">Clasificación de antibióticos · OMS 2025</p>  <!-- subtitulo -->
+      </div>
+    </header>
+
+    <!-- Pestañas para cambiar entre "Entrar" y "Crear cuenta" -->
+    <div class="pestanas" role="tablist">
+      <button type="button" class="pestana activa" id="tab-login" role="tab" aria-selected="true">Entrar</button>
+      <button type="button" class="pestana" id="tab-registro" role="tab" aria-selected="false">Crear cuenta</button>
+    </div>
+
+    <!-- Formulario de inicio de sesion -->
+    <form id="form-login" autocomplete="on" novalidate>               <!-- novalidate: validamos nosotros con mensajes claros -->
+      <label for="login-usuario">Usuario</label>                      <!-- etiqueta del campo -->
+      <input id="login-usuario" name="username" autocomplete="username" required maxlength="64" autofocus>
+      <label for="login-clave">Contraseña</label>                     <!-- etiqueta del campo -->
+      <input id="login-clave" name="password" type="password" autocomplete="current-password" required maxlength="128">
+      <button type="submit" class="boton-principal">Entrar</button>   <!-- envia el formulario -->
+    </form>
+
+    <!-- Formulario de registro (oculto hasta elegir la pestaña) -->
+    <form id="form-registro" autocomplete="on" novalidate hidden>
+      <label for="reg-codigo">Código de invitación</label>            <!-- lo entrega el administrador -->
+      <input id="reg-codigo" name="invitation_code" required maxlength="64" placeholder="AWARE-…" autocomplete="off">
+      <label for="reg-usuario">Usuario</label>
+      <input id="reg-usuario" name="username" autocomplete="username" required maxlength="64">
+      <p class="ayuda">3 a 32 caracteres: letras, números, punto, guion o guion bajo.</p>
+      <label for="reg-clave">Contraseña</label>
+      <input id="reg-clave" name="password" type="password" autocomplete="new-password" required maxlength="128">
+      <p class="ayuda">Mínimo 10 caracteres, con letras y números, sin incluir tu usuario.</p>
+      <button type="submit" class="boton-principal">Crear cuenta y entrar</button>
+    </form>
+
+    <!-- Aqui se muestran los errores o avisos; aria-live hace que los lectores de pantalla los lean -->
+    <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
+
+    <p class="pie">Acceso exclusivo para personal de farmacia.</p>  <!-- aviso final -->
+  </main>
+
+</body>
+</html>

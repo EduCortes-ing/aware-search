@@ -1,0 +1,117 @@
+# =====================================================================
+# docker-compose.yml - Buscador AWaRe (OMS 2025)
+# Orquesta todos los contenedores de la arquitectura conceptual.
+# Uso:  docker compose up --build
+# =====================================================================
+
+services:
+
+  # ---------- FRONTEND (Nginx + login + buscador) ----------
+  frontend:
+    build: ./frontend            # construye la imagen con ./frontend/Dockerfile
+    ports:
+      - "8080:80"                # unico puerto expuesto al exterior (host:contenedor)
+    depends_on:
+      - api                      # arranca despues de la API
+    networks:
+      - frontend_net             # solo puede hablar con la API
+
+  # ---------- API REST en Python (puerta de entrada, Swagger en /docs) ----------
+  api:
+    build: ./api
+    environment:
+      AUTH_URL: http://auth-service:8001      # direccion interna del microservicio de auth
+      SEARCH_URL: http://search-service:8002  # direccion interna del microservicio de busqueda
+      JWT_SECRET: ${JWT_SECRET}               # se lee del archivo .env (nunca en el codigo)
+    depends_on:
+      - auth-service
+      - search-service
+    networks:
+      - frontend_net             # recibe peticiones del frontend
+      - backend_net              # llama a los microservicios
+
+  # ---------- MICROSERVICIO DE AUTENTICACION (usuario/contrasena -> JWT) ----------
+  auth-service:
+    build: ./auth-service
+    environment:
+      DATABASE_URL: postgresql://${USERS_DB_USER}:${USERS_DB_PASSWORD}@db-users:5432/${USERS_DB_NAME}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      db-users:
+        condition: service_healthy   # espera a que Postgres este listo
+    networks:
+      - backend_net
+      - users_net                # unico servicio con acceso a la BD de usuarios
+
+  # ---------- MICROSERVICIO DE BUSQUEDA (sustancia / clase / ATC) ----------
+  search-service:
+    build: ./search-service
+    environment:
+      DATABASE_URL: postgresql://${AWARE_DB_USER}:${AWARE_DB_PASSWORD}@db-aware:5432/${AWARE_DB_NAME}
+    depends_on:
+      db-aware:
+        condition: service_healthy
+    networks:
+      - backend_net
+      - aware_net                # unico servicio (con el ETL) que ve la BD AWaRe
+
+  # ---------- BASE DE DATOS DE USUARIOS ----------
+  db-users:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${USERS_DB_NAME}
+      POSTGRES_USER: ${USERS_DB_USER}
+      POSTGRES_PASSWORD: ${USERS_DB_PASSWORD}
+    volumes:
+      - users_data:/var/lib/postgresql/data   # los datos sobreviven a reinicios
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${USERS_DB_USER} -d ${USERS_DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - users_net
+
+  # ---------- BASE DE DATOS AWaRe (clasificacion OMS) ----------
+  db-aware:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${AWARE_DB_NAME}
+      POSTGRES_USER: ${AWARE_DB_USER}
+      POSTGRES_PASSWORD: ${AWARE_DB_PASSWORD}
+    volumes:
+      - aware_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AWARE_DB_USER} -d ${AWARE_DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - aware_net
+
+  # ---------- ETL: carga unica del Excel de la OMS a la BD AWaRe ----------
+  # No arranca con "up"; se ejecuta a mano:  docker compose run --rm etl
+  etl:
+    build: ./etl
+    profiles: ["etl"]            # solo corre cuando se pide explicitamente
+    environment:
+      DATABASE_URL: postgresql://${AWARE_DB_USER}:${AWARE_DB_PASSWORD}@db-aware:5432/${AWARE_DB_NAME}
+    volumes:
+      - ./data:/data:ro          # monta la carpeta data/ en solo lectura
+    depends_on:
+      db-aware:
+        condition: service_healthy
+    networks:
+      - aware_net
+
+# ---------- REDES: aislan los contenedores entre si ----------
+networks:
+  frontend_net:   # navegador <-> frontend <-> api
+  backend_net:    # api <-> microservicios
+  users_net:      # auth <-> BD usuarios
+  aware_net:      # busqueda/etl <-> BD AWaRe
+
+# ---------- VOLUMENES: almacenamiento persistente de las BD ----------
+volumes:
+  users_data:
+  aware_data:
