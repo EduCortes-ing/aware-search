@@ -69,34 +69,7 @@
 
       <!-- Asistente de IA (Ollama local) -->
       <div class="ia">
-        <div class="ia-botones">
-          <button type="button" class="boton-ia" data-accion="uso">¿Para qué sirve?</button>
-          <button type="button" class="boton-ia" data-accion="dosis">Dosis sugerida (IA)</button>
-        </div>
-
-        <!-- Formulario de dosis: se muestra al pulsar "Dosis sugerida" -->
-        <form class="form-dosis" novalidate hidden>
-          <div class="campos-dosis">
-            <label>Edad
-              <span class="edad-grupo">
-                <input name="edad" type="number" min="0" max="120" step="0.5" inputmode="decimal" required>
-                <select name="unidad_edad" aria-label="Unidad de edad">
-                  <option value="anios">años</option>
-                  <option value="meses">meses</option>
-                </select>
-              </span>
-            </label>
-            <label>Peso (kg)
-              <input name="peso_kg" type="number" min="0.5" max="300" step="0.1" inputmode="decimal"
-                     placeholder="Obligatorio en menores de 12">
-            </label>
-            <label class="campo-ancho">Indicación (opcional)
-              <input name="indicacion" maxlength="80" autocomplete="off" placeholder="Ej. otitis, faringitis, IVU">
-            </label>
-          </div>
-          <button type="submit" class="boton-ia boton-calcular">Calcular dosis</button>
-        </form>
-
+        <button type="button" class="boton-ia" data-accion="uso">¿Para qué sirve?</button>
         <!-- Aqui app.js dibuja la respuesta de la IA (siempre con textContent) -->
         <div class="respuesta-ia" aria-live="polite" hidden></div>
       </div>

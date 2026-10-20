@@ -178,28 +178,12 @@ input:focus { outline: 2px solid var(--foco); outline-offset: 1px; border-color:
 
 /* ---------- Asistente de IA dentro de cada tarjeta ---------- */
 .ia { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--borde); }  /* separado de los datos */
-.ia-botones { display: flex; flex-wrap: wrap; gap: 8px; }  /* botones en fila (bajan en celular) */
 .boton-ia {                                           /* botones secundarios de la IA */
   border: 1px solid var(--marca); background: transparent; color: var(--marca);
   border-radius: 999px; padding: 6px 14px; font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer;
 }
 .boton-ia:hover:not(:disabled) { background: var(--marca); color: var(--marca-texto); }  /* se rellena al pasar el mouse */
-.boton-ia:disabled { opacity: .45; cursor: not-allowed; }  /* apagado (cargando o no recomendado) */
-
-.form-dosis { margin-top: 12px; padding: 12px; border-radius: 10px; background: var(--fondo); }  /* recuadro del formulario */
-.campos-dosis {                                       /* campos en rejilla adaptable */
-  display: grid; gap: 10px 14px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-}
-.campos-dosis label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; font-weight: 600; margin: 0; }
-.campos-dosis input, .campos-dosis select { padding: 8px 10px; font-size: .95rem; }  /* campos compactos */
-.campo-ancho { grid-column: 1 / -1; }                 /* la indicacion ocupa todo el ancho */
-.edad-grupo { display: flex; gap: 6px; }              /* edad + unidad juntas */
-.edad-grupo input { flex: 1; min-width: 0; }
-.edad-grupo select {                                  /* selector de años/meses */
-  font: inherit; color: var(--texto); background: var(--superficie);
-  border: 1px solid var(--borde); border-radius: 10px;
-}
-.boton-calcular { margin-top: 12px; background: var(--marca); color: var(--marca-texto); }  /* boton principal del formulario */
+.boton-ia:disabled { opacity: .45; cursor: not-allowed; }  /* apagado mientras responde */
 
 .respuesta-ia {                                       /* caja con la respuesta de la IA */
   margin-top: 12px; padding: 14px; border-radius: 10px;
@@ -211,15 +195,6 @@ input:focus { outline: 2px solid var(--foco); outline-offset: 1px; border-color:
 .respuesta-ia ul { margin: 0; padding-left: 20px; }
 .respuesta-ia.esperando { color: var(--texto-suave); font-style: italic; }  /* mientras responde */
 .respuesta-ia.error { color: var(--error); background: var(--reserve-fondo); }  /* errores en rojo */
-.paciente { color: var(--texto-suave); }              /* resumen del paciente */
-.datos-dosis { margin-top: 10px; }                    /* rejilla de la dosis */
-.calculo {                                            /* linea del calculo (verificable) */
-  margin-top: 10px !important; padding: 8px 10px; border-radius: 8px;
-  background: var(--superficie); font-family: ui-monospace, Consolas, monospace; font-size: .85rem;
-  overflow-wrap: anywhere;
-}
-.advertencias li { color: var(--watch); }             /* avisos del sistema en ambar */
-.advertencias.grave li:first-child { color: var(--error); font-weight: 700; }  /* "NO confiable" en rojo */
 .aviso-ia { margin-top: 12px !important; color: var(--texto-suave); font-size: .78rem; }  /* aviso legal */
 
 .pie-pagina { padding: 16px; text-align: center; color: var(--texto-suave); font-size: .8rem; }  /* pie del buscador */

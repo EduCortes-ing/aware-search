@@ -3,11 +3,11 @@
 # API REST: unica puerta de entrada del sistema (Swagger en /api/docs).
 #   /login, /register -> se reenvian al microservicio de autenticacion
 #   /search           -> exige token JWT valido y consulta la busqueda
-#   /ai/uso, /ai/dosis -> exigen token JWT y consultan al servicio de IA
+#   /ai/uso           -> exige token JWT y consulta al servicio de IA
 # =====================================================================
 
 import os                                            # leer variables de entorno
-from typing import Literal, Optional                 # tipos opcionales y de valores fijos
+from typing import Optional                          # tipos opcionales
 
 import httpx                                         # cliente HTTP para llamar a los microservicios
 import jwt                                           # validar tokens JWT (PyJWT)
@@ -134,22 +134,7 @@ class PeticionUso(BaseModel):
     name: str = Field(..., min_length=2, max_length=120, description="Nombre exacto del antibiótico")
 
 
-class PeticionDosis(BaseModel):
-    """Cuerpo de /ai/dosis."""
-    name: str = Field(..., min_length=2, max_length=120, description="Nombre exacto del antibiótico")
-    edad: float = Field(..., ge=0, le=1440, description="Edad del paciente")
-    unidad_edad: Literal["anios", "meses"] = "anios"  # unidad de la edad
-    peso_kg: Optional[float] = Field(None, gt=0, le=300, description="Obligatorio en menores de 12 años")
-    indicacion: Optional[str] = Field(None, max_length=80, description="Ej. otitis, faringitis")
-
-
 @app.post("/ai/uso")
 async def ai_uso(datos: PeticionUso, _usuario: dict = Depends(usuario_actual)):
     """IA: para que sirve el antibiotico (requiere sesion)."""
     return await llamar("POST", f"{AI_URL}/uso", tiempo=TIEMPO_IA, json=datos.model_dump())
-
-
-@app.post("/ai/dosis")
-async def ai_dosis(datos: PeticionDosis, _usuario: dict = Depends(usuario_actual)):
-    """IA: dosis sugerida segun edad y peso; los calculos los hace Python (requiere sesion)."""
-    return await llamar("POST", f"{AI_URL}/dosis", tiempo=TIEMPO_IA, json=datos.model_dump())

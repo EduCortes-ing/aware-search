@@ -88,7 +88,7 @@ comprobar("Login con usuario inexistente: 401 genérico vía auth-service", esta
 estado, r = pedir("/ai/uso", metodo="POST", cuerpo={"name": "Amoxicillin"})
 comprobar("IA sin token rechazada (401)", estado == 401, estado)
 
-estado, r = pedir("/ai/dosis", token(), metodo="POST", cuerpo={"name": "Amoxicillin", "edad": 30, "peso_kg": 900})
+estado, r = pedir("/ai/uso", token(), metodo="POST", cuerpo={"name": "x" * 500})
 comprobar("IA con datos inválidos rechazada antes de llegar al modelo (422)", estado == 422, estado)
 
 print(f"\nResultado: {sum(resultados)}/{len(resultados)} comprobaciones correctas")

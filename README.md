@@ -3,8 +3,7 @@
 Buscador de antibióticos por sustancia (en español o inglés), clase o código ATC
 que muestra su categoría AWaRe: **Access**, **Watch**, **Reserve** o **No recomendado**.
 Requiere usuario y contraseña; la API valida un token JWT antes de cada búsqueda.
-Incluye un asistente de **IA local (Ollama)** que explica para qué sirve cada antibiótico
-y sugiere una dosis según edad y peso, con candados de seguridad en el código.
+Incluye un asistente de **IA local (Ollama)** que explica para qué sirve cada antibiótico.
 
 ## Arquitectura (microservicios en Docker)
 | Contenedor       | Función                                                         | Expuesto |
@@ -13,7 +12,7 @@ y sugiere una dosis según edad y peso, con candados de seguridad en el código.
 | `api`            | Puerta de entrada; valida el JWT (Swagger en `/api/docs`)       | no       |
 | `auth-service`   | Registro con invitación, login, bloqueo tras 5 fallos           | no       |
 | `search-service` | Búsqueda en la BD AWaRe                                         | no       |
-| `ai-service`     | IA: para qué sirve y dosis sugerida (prompts KERNEL)            | no       |
+| `ai-service`     | IA: para qué sirve cada antibiótico (prompts KERNEL)            | no       |
 | `ollama`         | Motor de IA local con el modelo `qwen2.5:3b` (~2 GB)            | no       |
 | `db-users`       | PostgreSQL de usuarios                                          | no       |
 | `db-aware`       | PostgreSQL con la clasificación de la OMS                       | no       |
@@ -33,10 +32,11 @@ y sugiere una dosis según edad y peso, con candados de seguridad en el código.
 - **Método KERNEL** en `ai-service/app/prompts.py`: una tarea por prompt, salida JSON con esquema,
   temperatura 0.1 y semilla fija, contexto oficial de la OMS, restricciones numeradas y estructura
   CONTEXTO → TAREA → RESTRICCIONES → FORMATO.
-- **Candados en código** (no dependen de la IA): peso obligatorio en menores de 12 años; la
-  multiplicación por peso la hace Python; tope de dosis máxima diaria; sin dosis en recién nacidos
-  ni en combinaciones "No recomendadas"; valores absurdos → "NO confiable"; 6 consultas/min por IP.
-- Las sugerencias de la IA son de apoyo: verificar siempre con la receta y la información para prescribir.
+- Seguridad: los datos del antibiótico vienen de la BD oficial (no del usuario), la respuesta se valida
+  contra un esquema, se muestra como texto plano (sin HTML) y hay un límite de 6 consultas/min por IP.
+- **Dosis:** se probó que la IA sugiriera dosis y, con el modelo real, dio valores incorrectos
+  (p. ej. amoxicilina pediátrica de 10–15 mg/kg/día). Por seguridad se retiró; se agregará desde una
+  tabla verificada de la guía AWaRe de la OMS, con la IA solo como redactora.
 
 ## Dar acceso a otra persona
 `docker compose exec auth-service python -m app.cli crear-invitacion --dias 7 --nota "Nombre"`
@@ -45,7 +45,7 @@ La persona usa ese código en la pestaña **Crear cuenta**.
 ## Pruebas automáticas
 - `docker compose exec auth-service python -m app.prueba` → 9/9
 - `docker compose exec api python -m app.prueba` → 13/13
-- `docker compose exec ai-service python -m app.prueba` → 6/6 sin modelo; 10/10 con el modelo descargado
+- `docker compose exec ai-service python -m app.prueba` → 4/4 sin modelo; 6/6 con el modelo descargado
 
 ## Despliegue público (Oracle Cloud Always Free)
 El servidor usa los mismos contenedores más **Caddy**, que da HTTPS gratis y automático.
