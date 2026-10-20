@@ -194,6 +194,7 @@ async function iniciarBuscador() {
     estado.textContent = datos.count === 1 ? "1 resultado" : `${datos.count} resultados`;  // cuantos hay
     for (const a of datos.results) {                  // una tarjeta por antibiotico
       const t = plantilla.content.firstElementChild.cloneNode(true);  // copia del molde
+      t.dataset.nombre = a.name;                     // nombre exacto: lo usa la IA para buscar datos oficiales
       t.querySelector(".nombre").textContent = a.name;              // nombre (texto, no HTML)
       const chip = t.querySelector(".categoria");                   // etiqueta de color
       chip.textContent = ETIQUETAS[a.category] || a.category;       // texto de la categoria
@@ -206,6 +207,11 @@ async function iniciarBuscador() {
         const nota = t.querySelector(".nota");
         nota.textContent = a.notes.replace(/^\*+\s*/, "");          // quita los asteriscos del Excel
         nota.hidden = false;                          // la muestra
+      }
+      if (a.category === "Not recommended") {        // la OMS no lo recomienda: no se ofrece dosis
+        const botonDosis = t.querySelector('[data-accion="dosis"]');
+        botonDosis.disabled = true;                   // boton apagado
+        botonDosis.title = "La OMS no recomienda esta combinación";  // explica por que
       }
       lista.appendChild(t);                           // agrega la tarjeta a la lista
     }
@@ -226,6 +232,8 @@ async function iniciarBuscador() {
     }
   }
 
+  activarIA(lista);                                   // botones de IA en las tarjetas
+
   entrada.addEventListener("input", () => {           // cada vez que cambia el texto
     clearTimeout(espera);                             // reinicia la espera
     const texto = entrada.value.trim();               // texto sin espacios en los extremos
@@ -243,6 +251,134 @@ async function iniciarBuscador() {
     clearTimeout(espera);                             // cancela la espera
     const texto = entrada.value.trim();               // texto actual
     if (texto.length >= 2) buscar(texto);             // busca de inmediato
+  });
+}
+
+// ---------------------------------------------------------------------
+// Asistente de IA en cada tarjeta (¿para que sirve? y dosis sugerida)
+// Todo se dibuja con textContent: lo que responde la IA nunca se interpreta como HTML.
+// ---------------------------------------------------------------------
+function crear(etiqueta, clase, texto) {             // crea un elemento con clase y texto seguros
+  const el = document.createElement(etiqueta);       // nuevo elemento
+  if (clase) el.className = clase;                   // clase CSS opcional
+  if (texto !== undefined) el.textContent = texto;   // texto plano (nunca HTML)
+  return el;
+}
+
+function listaDeTextos(titulo, elementos, clase) {   // titulo + lista con viñetas
+  const bloque = document.createDocumentFragment();  // contenedor temporal
+  if (!elementos || !elementos.length) return bloque; // nada que mostrar
+  bloque.appendChild(crear("h4", null, titulo));     // subtitulo
+  const ul = crear("ul", clase);                     // lista
+  for (const e of elementos) ul.appendChild(crear("li", null, e));  // una viñeta por elemento
+  bloque.appendChild(ul);
+  return bloque;
+}
+
+function pieIA(datos) {                              // aviso legal + modelo usado
+  return crear("p", "aviso-ia", `${datos.aviso} Modelo: ${datos.modelo}.`);
+}
+
+function pintarUso(caja, datos) {                    // respuesta de "¿para que sirve?"
+  caja.replaceChildren(
+    crear("h3", null, "¿Para qué sirve?"),
+    crear("p", null, datos.uso.para_que_sirve),
+    listaDeTextos("Se usa comúnmente en", datos.uso.infecciones_frecuentes),
+    listaDeTextos("Precauciones", datos.uso.precauciones),
+    pieIA(datos),
+  );
+}
+
+function textoEdad(anios) {                          // 0.5 -> "6 meses"; 7 -> "7 años"
+  if (anios < 2) return `${Math.round(anios * 12)} meses`;
+  return `${anios} años`;
+}
+
+function pintarDosis(caja, datos) {                  // respuesta de dosis sugerida
+  const p = datos.paciente;                          // datos del paciente que uso el sistema
+  const resumen = [textoEdad(p.edad_anios)];         // "5 años"
+  if (p.peso_kg) resumen.push(`${p.peso_kg} kg`);    // "18 kg"
+  if (p.indicacion) resumen.push(p.indicacion);      // "otitis media"
+  const nodos = [
+    crear("h3", null, "Dosis sugerida"),
+    crear("p", "paciente", `Paciente: ${resumen.join(" · ")}`),
+  ];
+  if (datos.confiable && datos.dosis) {              // solo se muestran numeros si pasaron los candados
+    const d = datos.dosis;
+    const dl = crear("dl", "datos datos-dosis");     // misma rejilla que los datos de la tarjeta
+    for (const [termino, valor] of [
+      ["Por toma", d.por_toma], ["Frecuencia", d.frecuencia], ["Total al día", d.al_dia],
+      ["Vía", d.via], ["Duración", d.duracion], ["Máximo diario", d.dosis_max_dia],
+    ]) {
+      const fila = crear("div");                     // par termino-valor
+      fila.append(crear("dt", null, termino), crear("dd", null, valor));
+      dl.appendChild(fila);
+    }
+    nodos.push(dl, crear("p", "calculo", `Cálculo: ${d.calculo}`));  // como se obtuvo (verificable)
+  }
+  nodos.push(
+    listaDeTextos("Advertencias", datos.advertencias, datos.confiable ? "advertencias" : "advertencias grave"),
+    listaDeTextos("Notas de la IA", datos.notas_ia),
+    pieIA(datos),
+  );
+  caja.replaceChildren(...nodos);
+}
+
+function activarIA(lista) {                          // un solo escuchador para todas las tarjetas
+  async function consultar(tarjeta, ruta, cuerpo, pintar) {
+    const caja = tarjeta.querySelector(".respuesta-ia");     // zona de respuesta
+    const botones = tarjeta.querySelectorAll(".boton-ia");   // botones a bloquear
+    caja.hidden = false;                             // la muestra
+    caja.className = "respuesta-ia esperando";       // estilo "cargando"
+    caja.textContent = "Consultando a la IA… puede tardar hasta un minuto.";
+    botones.forEach((b) => { b.dataset.antes = b.disabled; b.disabled = true; });  // evita dobles clics
+    try {
+      const datos = await pedir(ruta, { metodo: "POST", cuerpo, exigeSesion: true });
+      caja.className = "respuesta-ia";               // estilo normal
+      pintar(caja, datos);                           // dibuja la respuesta
+    } catch (e) {
+      caja.className = "respuesta-ia error";         // estilo de error
+      caja.textContent = e.message;                  // mensaje del servidor (texto plano)
+    } finally {
+      botones.forEach((b) => { b.disabled = b.dataset.antes === "true"; });  // restaura los botones
+    }
+  }
+
+  lista.addEventListener("click", (evento) => {      // clics en los botones de IA
+    const boton = evento.target.closest(".boton-ia[data-accion]");
+    if (!boton) return;                              // no fue un boton de IA
+    const tarjeta = boton.closest(".tarjeta");       // tarjeta del antibiotico
+    if (boton.dataset.accion === "uso") {            // ¿para que sirve?
+      consultar(tarjeta, "/ai/uso", { name: tarjeta.dataset.nombre }, pintarUso);
+    } else {                                         // dosis: abre o cierra el formulario
+      const form = tarjeta.querySelector(".form-dosis");
+      form.hidden = !form.hidden;
+      if (!form.hidden) form.edad.focus();           // cursor en la edad
+    }
+  });
+
+  lista.addEventListener("submit", (evento) => {     // envio del formulario de dosis
+    const form = evento.target.closest(".form-dosis");
+    if (!form) return;
+    evento.preventDefault();                         // evita recargar la pagina
+    const tarjeta = form.closest(".tarjeta");
+    const caja = tarjeta.querySelector(".respuesta-ia");
+    const edad = parseFloat(form.edad.value);        // numero o NaN
+    const unidad = form.unidad_edad.value;           // "anios" o "meses"
+    const peso = form.peso_kg.value ? parseFloat(form.peso_kg.value) : null;
+    const edadAnios = unidad === "meses" ? edad / 12 : edad;
+    function avisar(texto) {                         // error de captura sin llamar al servidor
+      caja.hidden = false;
+      caja.className = "respuesta-ia error";
+      caja.textContent = texto;
+    }
+    if (Number.isNaN(edad) || edad < 0) return avisar("Escribe la edad del paciente.");
+    if (edadAnios < 12 && !peso) return avisar("Para menores de 12 años escribe el peso en kg.");
+    consultar(tarjeta, "/ai/dosis", {
+      name: tarjeta.dataset.nombre,                  // nombre exacto del antibiotico
+      edad, unidad_edad: unidad, peso_kg: peso,      // datos del paciente
+      indicacion: form.indicacion.value.trim() || null,  // texto opcional
+    }, pintarDosis);
   });
 }
 

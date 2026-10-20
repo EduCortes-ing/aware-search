@@ -125,6 +125,26 @@ def health():
         pool.putconn(conexion)                       # devuelve la conexion al pool
 
 
+@app.get("/detalle", response_model=Antibiotico)
+def detalle(name: str = Query(..., min_length=2, max_length=120, description="Nombre exacto, ej. 'Colistin (IV)'")):
+    """Devuelve UN antibiotico por su nombre exacto (lo usa el servicio de IA como contexto oficial)."""
+    conexion = pool.getconn()                        # toma una conexion del pool
+    try:
+        with conexion.cursor(cursor_factory=RealDictCursor) as cur:  # filas como diccionarios
+            cur.execute(                             # consulta parametrizada (evita inyeccion SQL)
+                """SELECT name, base_name, route, class AS drug_class, atc_code, category,
+                          listed_eml, notes
+                   FROM antibiotics WHERE name = %s""",
+                (name.strip(),),                     # nombre sin espacios sobrantes
+            )
+            fila = cur.fetchone()                    # None si no existe
+    finally:
+        pool.putconn(conexion)                       # siempre devuelve la conexion
+    if fila is None:                                 # nombre desconocido
+        raise HTTPException(status_code=404, detail="Antibiótico no encontrado")
+    return fila                                      # datos oficiales de la OMS
+
+
 @app.get("/search", response_model=Respuesta)
 def buscar(
     q: str = Query(..., min_length=2, max_length=60, description="Sustancia, clase o codigo ATC"),

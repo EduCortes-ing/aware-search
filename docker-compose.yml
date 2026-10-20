@@ -22,10 +22,12 @@ services:
     environment:
       AUTH_URL: http://auth-service:8001      # direccion interna del microservicio de auth
       SEARCH_URL: http://search-service:8002  # direccion interna del microservicio de busqueda
+      AI_URL: http://ai-service:8003          # direccion interna del microservicio de IA
       JWT_SECRET: ${JWT_SECRET}               # se lee del archivo .env (nunca en el codigo)
     depends_on:
       - auth-service
       - search-service
+      - ai-service
     networks:
       - frontend_net             # recibe peticiones del frontend
       - backend_net              # llama a los microservicios
@@ -54,6 +56,31 @@ services:
     networks:
       - backend_net
       - aware_net                # unico servicio (con el ETL) que ve la BD AWaRe
+
+  # ---------- MICROSERVICIO DE IA (para que sirve + dosis sugerida) ----------
+  ai-service:
+    build: ./ai-service
+    environment:
+      OLLAMA_URL: http://ollama:11434                 # direccion interna de Ollama
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}       # modelo (se puede cambiar en .env)
+      SEARCH_URL: http://search-service:8002          # de aqui toma los datos oficiales OMS
+    depends_on:
+      - ollama
+      - search-service
+    networks:
+      - backend_net              # recibe peticiones de la API y consulta search-service
+      - ai_net                   # habla con Ollama
+
+  # ---------- OLLAMA: motor de IA local (modelo de lenguaje en CPU) ----------
+  ollama:
+    image: ollama/ollama:latest  # servidor oficial de Ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: 30m     # mantiene el modelo cargado en memoria 30 min
+      OLLAMA_NUM_PARALLEL: 1     # una respuesta a la vez (ahorra RAM)
+    volumes:
+      - ollama_data:/root/.ollama  # el modelo descargado (~2 GB) sobrevive a reinicios
+    networks:
+      - ai_net                   # solo lo ve ai-service; no tiene puerto publico
 
   # ---------- BASE DE DATOS DE USUARIOS ----------
   db-users:
@@ -110,8 +137,10 @@ networks:
   backend_net:    # api <-> microservicios
   users_net:      # auth <-> BD usuarios
   aware_net:      # busqueda/etl <-> BD AWaRe
+  ai_net:         # ai-service <-> Ollama (con salida a internet para descargar el modelo)
 
 # ---------- VOLUMENES: almacenamiento persistente de las BD ----------
 volumes:
   users_data:
   aware_data:
+  ollama_data:    # modelos de IA descargados

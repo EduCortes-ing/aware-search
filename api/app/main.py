@@ -3,10 +3,11 @@
 # API REST: unica puerta de entrada del sistema (Swagger en /api/docs).
 #   /login, /register -> se reenvian al microservicio de autenticacion
 #   /search           -> exige token JWT valido y consulta la busqueda
+#   /ai/uso, /ai/dosis -> exigen token JWT y consultan al servicio de IA
 # =====================================================================
 
 import os                                            # leer variables de entorno
-from typing import Optional                          # tipos opcionales
+from typing import Literal, Optional                 # tipos opcionales y de valores fijos
 
 import httpx                                         # cliente HTTP para llamar a los microservicios
 import jwt                                           # validar tokens JWT (PyJWT)
@@ -17,6 +18,7 @@ from pydantic import BaseModel, Field                # validacion de los datos q
 
 AUTH_URL = os.environ["AUTH_URL"]                    # direccion interna del servicio de auth
 SEARCH_URL = os.environ["SEARCH_URL"]                # direccion interna del servicio de busqueda
+AI_URL = os.environ.get("AI_URL", "http://ai-service:8003")  # direccion interna del servicio de IA
 JWT_SECRET = os.environ.get("JWT_SECRET", "")        # misma clave con la que auth firma los tokens
 if len(JWT_SECRET) < 32:                             # una clave corta se puede adivinar
     raise RuntimeError("JWT_SECRET debe tener al menos 32 caracteres")
@@ -24,6 +26,7 @@ if len(JWT_SECRET) < 32:                             # una clave corta se puede 
 ALGORITMO = "HS256"                                  # algoritmo permitido (se fija: nunca lo elige el token)
 EMISOR = "aware-auth"                                # emisor esperado en el token
 TIEMPO_MAXIMO = httpx.Timeout(5.0)                   # si un microservicio tarda mas de 5 s, se corta
+TIEMPO_IA = httpx.Timeout(170.0, connect=5.0)        # la IA en CPU puede tardar hasta ~2.5 min
 
 # root_path="/api": Nginx publica esta API bajo /api, asi Swagger encuentra sus rutas
 app = FastAPI(
@@ -65,10 +68,10 @@ def usuario_actual(credenciales: Optional[HTTPAuthorizationCredentials] = Depend
         raise HTTPException(401, "Token inválido", headers=cabecera)
 
 
-async def llamar(metodo: str, url: str, **parametros):
+async def llamar(metodo: str, url: str, tiempo=TIEMPO_MAXIMO, **parametros):
     """Llama a un microservicio interno y devuelve su respuesta tal cual."""
     try:
-        async with httpx.AsyncClient(timeout=TIEMPO_MAXIMO) as cliente:  # cliente con tiempo limite
+        async with httpx.AsyncClient(timeout=tiempo) as cliente:  # cliente con tiempo limite
             respuesta = await cliente.request(metodo, url, **parametros)  # hace la llamada
         cuerpo = respuesta.json()                    # el microservicio siempre responde JSON
     except (httpx.HTTPError, ValueError):            # no responde, se agoto el tiempo o no es JSON
@@ -121,3 +124,32 @@ async def search(
 ):
     """Busca antibioticos y devuelve su clasificacion AWaRe (requiere sesion)."""
     return await llamar("GET", f"{SEARCH_URL}/search", params={"q": q, "limit": limit})
+
+
+# ---------------------------------------------------------------------
+# Inteligencia artificial (Ollama local, a traves de ai-service)
+# ---------------------------------------------------------------------
+class PeticionUso(BaseModel):
+    """Cuerpo de /ai/uso."""
+    name: str = Field(..., min_length=2, max_length=120, description="Nombre exacto del antibiótico")
+
+
+class PeticionDosis(BaseModel):
+    """Cuerpo de /ai/dosis."""
+    name: str = Field(..., min_length=2, max_length=120, description="Nombre exacto del antibiótico")
+    edad: float = Field(..., ge=0, le=1440, description="Edad del paciente")
+    unidad_edad: Literal["anios", "meses"] = "anios"  # unidad de la edad
+    peso_kg: Optional[float] = Field(None, gt=0, le=300, description="Obligatorio en menores de 12 años")
+    indicacion: Optional[str] = Field(None, max_length=80, description="Ej. otitis, faringitis")
+
+
+@app.post("/ai/uso")
+async def ai_uso(datos: PeticionUso, _usuario: dict = Depends(usuario_actual)):
+    """IA: para que sirve el antibiotico (requiere sesion)."""
+    return await llamar("POST", f"{AI_URL}/uso", tiempo=TIEMPO_IA, json=datos.model_dump())
+
+
+@app.post("/ai/dosis")
+async def ai_dosis(datos: PeticionDosis, _usuario: dict = Depends(usuario_actual)):
+    """IA: dosis sugerida segun edad y peso; los calculos los hace Python (requiere sesion)."""
+    return await llamar("POST", f"{AI_URL}/dosis", tiempo=TIEMPO_IA, json=datos.model_dump())

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<!-- index.html: buscador tipo Google (solo se ve con sesion iniciada) -->
+<html lang="es">
+<head>
+  <meta charset="utf-8">                                              <!-- acentos y ñ correctos -->
+  <meta name="viewport" content="width=device-width, initial-scale=1"> <!-- se adapta a celulares -->
+  <title>Buscador AWaRe · OMS 2025</title>                            <!-- titulo de la pestaña -->
+  <link rel="stylesheet" href="styles.css">                           <!-- estilos compartidos -->
+  <script src="app.js" defer></script>                                <!-- logica; defer = corre al terminar de cargar el HTML -->
+</head>
+<body data-pagina="buscador" class="oculto-sin-sesion">              <!-- se oculta hasta confirmar la sesion -->
+
+  <!-- Barra superior: nombre de la app, usuario y boton de salir -->
+  <header class="barra">
+    <div class="marca marca-chica">
+      <span class="marca-icono" aria-hidden="true"></span>            <!-- icono decorativo -->
+      <strong>Buscador AWaRe</strong>                                  <!-- nombre corto -->
+    </div>
+    <div class="sesion">
+      <span id="saludo"></span>                                        <!-- "Hola, usuario" (lo llena app.js) -->
+      <button type="button" id="salir" class="boton-texto">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <main class="contenido">
+    <!-- Caja de busqueda principal -->
+    <section class="buscador" aria-label="Búsqueda">
+      <h1>¿Qué antibiótico buscas?</h1>                              <!-- titulo grande -->
+      <form id="form-busqueda" role="search">                          <!-- role=search ayuda a la accesibilidad -->
+        <label for="q" class="solo-lectores">Sustancia, clase o código ATC</label>
+        <input id="q" type="search" maxlength="60" autocomplete="off" spellcheck="false" autofocus
+               placeholder="Ej. amoxicilina, cefalosporinas, J01CA04">  <!-- ejemplo de lo que se puede escribir -->
+      </form>
+      <p class="ayuda">Escribe en español o inglés; no importan mayúsculas ni acentos.</p>
+    </section>
+
+    <!-- Leyenda de colores de las categorias AWaRe -->
+    <ul class="leyenda" aria-label="Categorías AWaRe">
+      <li><span class="chip access">Access</span> primera elección</li>
+      <li><span class="chip watch">Watch</span> uso vigilado</li>
+      <li><span class="chip reserve">Reserve</span> último recurso</li>
+      <li><span class="chip not-recommended">No recomendado</span> la OMS no lo recomienda</li>
+    </ul>
+
+    <!-- Estado de la busqueda: "3 resultados", "Sin coincidencias", errores -->
+    <p id="estado" class="estado" role="status" aria-live="polite"></p>
+
+    <!-- Lista de resultados (app.js crea una tarjeta por antibiotico) -->
+    <ol id="resultados" class="resultados"></ol>
+  </main>
+
+  <footer class="pie-pagina">
+    Fuente: OMS, clasificación AWaRe de antibióticos 2025. Herramienta de consulta; no sustituye el criterio clínico.
+  </footer>
+
+  <!-- Plantilla de una tarjeta: app.js la copia y llena con textContent (nunca con HTML, evita XSS) -->
+  <template id="plantilla-tarjeta">
+    <li class="tarjeta">
+      <div class="tarjeta-cabeza">
+        <h2 class="nombre"></h2>                                       <!-- nombre del antibiotico -->
+        <span class="chip categoria"></span>                           <!-- Access / Watch / Reserve -->
+      </div>
+      <dl class="datos">                                               <!-- lista de datos: termino y valor -->
+        <div><dt>Clase</dt><dd class="clase"></dd></div>
+        <div><dt>Código ATC</dt><dd class="atc"></dd></div>
+        <div><dt>Lista de Medicamentos Esenciales</dt><dd class="eml"></dd></div>
+      </dl>
+      <p class="nota" hidden></p>                                      <!-- nota de la OMS, si existe -->
+
+      <!-- Asistente de IA (Ollama local) -->
+      <div class="ia">
+        <button type="button" class="boton-ia" data-accion="uso">¿Para qué sirve?</button>
+        <!-- Aqui app.js dibuja la respuesta de la IA (siempre con textContent) -->
+        <div class="respuesta-ia" aria-live="polite" hidden></div>
+      </div>
+    </li>
+  </template>
+
+</body>
+</html>

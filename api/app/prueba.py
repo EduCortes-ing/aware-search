@@ -85,5 +85,11 @@ comprobar("/me devuelve el usuario del token", estado == 200 and r.get("username
 estado, r = pedir("/login", metodo="POST", cuerpo={"username": "nadie_existe_xyz", "password": "ClaveInventada123"})
 comprobar("Login con usuario inexistente: 401 genérico vía auth-service", estado == 401, estado)
 
+estado, r = pedir("/ai/uso", metodo="POST", cuerpo={"name": "Amoxicillin"})
+comprobar("IA sin token rechazada (401)", estado == 401, estado)
+
+estado, r = pedir("/ai/dosis", token(), metodo="POST", cuerpo={"name": "Amoxicillin", "edad": 30, "peso_kg": 900})
+comprobar("IA con datos inválidos rechazada antes de llegar al modelo (422)", estado == 422, estado)
+
 print(f"\nResultado: {sum(resultados)}/{len(resultados)} comprobaciones correctas")
 raise SystemExit(0 if all(resultados) else 1)

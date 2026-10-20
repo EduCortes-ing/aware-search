@@ -41,6 +41,10 @@ services:
     restart: unless-stopped
   db-aware:
     restart: unless-stopped
+  ai-service:
+    restart: unless-stopped
+  ollama:
+    restart: unless-stopped
 
 # Volumenes nuevos para Caddy (el certificado sobrevive a reinicios)
 volumes:
