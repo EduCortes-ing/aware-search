@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =====================================================================
-# deploy/instalar.sh - Prepara el servidor de Oracle (Ubuntu) UNA sola vez
+# deploy/instalar.sh - Prepara el servidor Ubuntu (Azure u Oracle) UNA sola vez
 # Uso, dentro de la carpeta del proyecto en el servidor:
 #   bash deploy/instalar.sh
 # Hace: instala Docker, abre los puertos 80 y 443, agrega memoria swap
@@ -20,10 +20,11 @@ fi
 sudo usermod -aG docker "$USER"                      # permite usar docker sin sudo (tras reconectar)
 
 echo "== 3/5 Abriendo los puertos 80 y 443 en el firewall de Ubuntu =="
-# Las imagenes de Ubuntu de Oracle traen iptables que bloquea todo excepto SSH
+# Oracle trae reglas iptables que bloquean todo excepto SSH; Azure no, pero la regla no estorba.
+# (En Azure ademas hay que abrir 80 y 443 en el portal: grupo de seguridad de red)
 for puerto in 80 443; do                             # HTTP y HTTPS
   if ! sudo iptables -C INPUT -p tcp --dport "$puerto" -m state --state NEW -j ACCEPT 2>/dev/null; then
-    sudo iptables -I INPUT 6 -p tcp --dport "$puerto" -m state --state NEW -j ACCEPT  # regla antes del bloqueo
+    sudo iptables -I INPUT 1 -p tcp --dport "$puerto" -m state --state NEW -j ACCEPT  # primera regla: antes de cualquier bloqueo
   fi
 done
 if command -v netfilter-persistent >/dev/null 2>&1; then
